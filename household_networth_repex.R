@@ -1,21 +1,5 @@
-# The following code is an example of reading the pipe-delimited Survey of Income and Program Participation (SIPP) 
-# 	data into an R dataframe in preparation for analysis. Specifically, this code loads in both the primary data file 
-#   and the calendar-year replicate weights file (as opposed to the longitudinal replicate weights). These files are 
-#   separate downloads on the SIPP website.
-# SIPP data are in person-month format, meaning each record represents one month for a specific person.
-#   Unique persons are identified using SSUID+PNUM. Unique households are identified using SSUID+ERESIDENCEID. For 
-#   additional guidance on using SIPP data, please see the SIPP Users' Guide at <https://www.census.gov/programs-surveys/sipp/guidance/users-guide.html>
-# This code was written in R 4.1.0, and requires the "data.table", "dplyr", and "bit64" packages. 
-# Note the 'select' statement in the first use of fread(). Most machines do not have enough memory to read
-# 	the entire SIPP file into memory. Use a 'select' statement to read in only the columns you are interested in using. 
-#   If you still encounter an out-of-memory error, you must select less columns or less observations.
-# Run this code from the same directory as the extracted data.
-# Please contact the SIPP Coordination and Outreach Staff at census.sipp@census.gov if you have any questions.
+setwd("data")
 
-# set your working directory, if necessary
-# setwd("")
-
-#Load the "data.table", "dplyr", and "bit64" libraries
 require("data.table")
 require("bit64")
 require("dplyr")
@@ -24,17 +8,14 @@ require("survey")
 require("readxl")
 require("matrixStats")
 
-setwd("data")
-
 #Read in the Primary Data files. 
-for(year in as.character(2022)){#2020:2022)){
+for(year in as.character(2022)){
 #for(year in as.character(2020:2022)){ #if we want to combine multiple years
     varname <- paste0("pu", year)
     filename <- paste0(varname,".csv")
     
     assign(varname, 
            fread(filename, sep = "|", select = c(
-  
                   #Common case identification variables
                   'SSUID','PNUM','MONTHCODE','ERESIDENCEID','ERELRPE','SPANEL','SWAVE',
   
@@ -64,7 +45,7 @@ pu <- pu2022
 pu <-  pu %>%
           filter(ERELRPE %in% c(1,2)) %>% #get householders only so that analysis is at household level
           filter(MONTHCODE==12) %>%  #take only last month of year in order to make annual estimate
-          filter(TLIVQTR != 3) %>%   #exclude group quarters 
+          filter(TLIVQTR != 3)   #exclude group quarters 
 
 #dictionary variable for mapping TEHC_ST variable to state names
 state_dict <- cbind(TEHC_ST=(1:56)[-c(3,7,14,43,52)], NAME=sort(c(state.name, "District of Columbia")))
@@ -88,13 +69,13 @@ sipp.svy = svrepdesign( data = sipp.df,
 svyquantile(x=~THNETWORTH , design=sipp.svy, quantiles=0.5 , na.rm = TRUE )
 
 #We can instead do the following with dplyr to get state-by-state results more quickly
-#household_var <- "THNETWORTH"
-household_var <- "THEQ_HOME"
+household_var <- "THNETWORTH"
+#household_var <- "THEQ_HOME"
 
 #Read in Excel file of official tables to compare net worth to
 truth <- read_excel("State_Wealth_tables_dy2021.xlsx")
 truth <- truth[-c(1:5), ] #drop headers 
-truth <- truth[,c(1,7)] #pick column that corresponds to current variable
+truth <- truth[,c(1,2)] #pick column that corresponds to current variable
 colnames(truth) <- c("State", "Reported")
 
 
